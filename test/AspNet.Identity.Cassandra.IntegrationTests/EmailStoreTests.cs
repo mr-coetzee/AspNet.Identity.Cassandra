@@ -14,14 +14,14 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public override void TestSetup()
         {
             base.TestSetup();
-            UserManager.UserTokenProvider = new TotpSecurityStampBasedTokenProvider<CassandraUser, Guid>();
+            UserManager.UserTokenProvider = new TotpSecurityStampBasedTokenProvider<User, Guid>();
         }
         
         [Test]
         public async void GetAndSetEmail()
         {
             // Create a user
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "emailUser1" };
+            var user = new User(Guid.NewGuid()) { UserName = "emailUser1" };
             await UserManager.CreateAsync(user);
             
             // User should not have an email address initially
@@ -43,12 +43,12 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         {
             // Create a user and set their email address
             const string email = "emailUser2@test.com";
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "emailUser2" };
+            var user = new User(Guid.NewGuid()) { UserName = "emailUser2" };
             await UserManager.CreateAsync(user);
             await UserManager.SetEmailAsync(user.Id, email);
             
             // User should be able to be looked up by email
-            CassandraUser foundUser = await UserManager.FindByEmailAsync(email);
+            User foundUser = await UserManager.FindByEmailAsync(email);
             foundUser.ShouldBeEquivalentToUser(user);
 
             // Delete the user
@@ -64,7 +64,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         {
             // Create a user and set their email address
             const string email = "emailUser3@test.com";
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "emailUser3" };
+            var user = new User(Guid.NewGuid()) { UserName = "emailUser3" };
             await UserManager.CreateAsync(user);
             await UserManager.SetEmailAsync(user.Id, email);
 
@@ -74,7 +74,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
             result.ShouldBeSuccess();
 
             // Should not be able to find the user by the old email address
-            CassandraUser foundUser = await UserManager.FindByEmailAsync(email);
+            User foundUser = await UserManager.FindByEmailAsync(email);
             foundUser.Should().BeNull();
 
             // Should be able to find the user by the new email address
@@ -87,7 +87,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         {
             // Create a user and set their email address
             const string email = "emailUser4@test.com";
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "emailUser4" };
+            var user = new User(Guid.NewGuid()) { UserName = "emailUser4" };
             await UserManager.CreateAsync(user);
             await UserManager.SetEmailAsync(user.Id, email);
 

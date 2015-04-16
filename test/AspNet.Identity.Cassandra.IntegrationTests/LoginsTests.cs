@@ -17,7 +17,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void AddRemoveLogins()
         {
             // Create a user
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "externalLoginUser1" };
+            var user = new User(Guid.NewGuid()) { UserName = "externalLoginUser1" };
             await UserManager.CreateAsync(user);
 
             // Should not have any logins intially
@@ -57,14 +57,14 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void FindByLogin()
         {
             // Create a user and add a login to the user
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "externalLoginUser2" };
+            var user = new User(Guid.NewGuid()) { UserName = "externalLoginUser2" };
             await UserManager.CreateAsync(user);
 
             var login = new UserLoginInfo("facebook", Guid.NewGuid().ToString());
             await UserManager.AddLoginAsync(user.Id, login);
 
             // Now we should be able to find the user by that login info
-            CassandraUser foundUser = await UserManager.FindAsync(login);
+            User foundUser = await UserManager.FindAsync(login);
             foundUser.ShouldBeEquivalentToUser(user);
         }
     }

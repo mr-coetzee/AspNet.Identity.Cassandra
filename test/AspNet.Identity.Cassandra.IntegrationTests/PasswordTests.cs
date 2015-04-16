@@ -14,14 +14,14 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public override void TestSetup()
         {
             base.TestSetup();
-            UserManager.UserTokenProvider = new TotpSecurityStampBasedTokenProvider<CassandraUser, Guid>();
+            UserManager.UserTokenProvider = new TotpSecurityStampBasedTokenProvider<User, Guid>();
         }
 
         [Test]
         public async void HasPassword()
         {
             // Create a user
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "passwordUser1" };
+            var user = new User(Guid.NewGuid()) { UserName = "passwordUser1" };
             await UserManager.CreateAsync(user);
 
             // Verify they are created without a password
@@ -29,7 +29,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
             hasPassword.Should().BeFalse();
 
             // Create a user with a password
-            user = new CassandraUser(Guid.NewGuid()) {UserName = "passwordUser2"};
+            user = new User(Guid.NewGuid()) {UserName = "passwordUser2"};
             await UserManager.CreateAsync(user, "somePassword");
 
             // Verify they have a password
@@ -41,7 +41,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void AddRemovePassword()
         {
             // Create user without password
-            var user = new CassandraUser(Guid.NewGuid()) {UserName = "passwordUser3"};
+            var user = new User(Guid.NewGuid()) {UserName = "passwordUser3"};
             await UserManager.CreateAsync(user);
 
             // Adding a password should succeed
@@ -61,7 +61,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void Authenticate()
         {
             // Create a user with a password
-            var user = new CassandraUser(Guid.NewGuid()) {UserName = "passwordUser4"};
+            var user = new User(Guid.NewGuid()) {UserName = "passwordUser4"};
             await UserManager.CreateAsync(user, "somePassword");
 
             // Should be able to authenticate user with password
@@ -73,7 +73,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void ChangePassword()
         {
             // Create a user with a password
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "passwordUser5" };
+            var user = new User(Guid.NewGuid()) { UserName = "passwordUser5" };
             await UserManager.CreateAsync(user, "somePassword");
 
             // Should be able to change the password
@@ -94,7 +94,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void ResetPassword()
         {
             // Create a user with a password
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "passwordUser6" };
+            var user = new User(Guid.NewGuid()) { UserName = "passwordUser6" };
             await UserManager.CreateAsync(user, "somePassword");
 
             // Generate a reset token and then reset the password should succeed

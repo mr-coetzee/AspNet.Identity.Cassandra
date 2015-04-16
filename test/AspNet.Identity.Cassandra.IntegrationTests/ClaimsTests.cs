@@ -18,7 +18,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void AddRemoveClaims()
         {
             // Create a user
-            var user = new CassandraUser(Guid.NewGuid()) {UserName = "claimsUser1"};
+            var user = new User(Guid.NewGuid()) {UserName = "claimsUser1"};
             await UserManager.CreateAsync(user);
 
             // User should not have any claims initially

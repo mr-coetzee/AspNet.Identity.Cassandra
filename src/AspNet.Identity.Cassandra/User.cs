@@ -7,7 +7,7 @@ namespace AspNet.Identity.Cassandra
     /// <summary>
     /// Represents a user.
     /// </summary>
-    public class CassandraUser : IUser<Guid>
+    public class User : IUser<Guid>
     {
         private readonly string _originalUserName;
         private readonly string _originalEmail;
@@ -75,12 +75,12 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Creates a new CassandraUser with the Id specified.
         /// </summary>
-        public CassandraUser(Guid userId)
+        public User(Guid userId)
             : this(userId, null, null)
         {
         }
 
-        private CassandraUser(Guid userId, string userName, string email)
+        private User(Guid userId, string userName, string email)
         {
             Id = userId;
             UserName = userName;
@@ -114,11 +114,11 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Creates a CassandraUser from a Row.  If the Row is null, returns null.
         /// </summary>
-        internal static CassandraUser FromRow(Row row)
+        internal static User FromRow(Row row)
         {
             if (row == null) return null;
 
-            var user = new CassandraUser(row.GetValue<Guid>("userid"), row.GetValue<string>("username"), row.GetValue<string>("email"))
+            var user = new User(row.GetValue<Guid>("userid"), row.GetValue<string>("username"), row.GetValue<string>("email"))
             {
                 PasswordHash = row.GetValue<string>("password_hash"),
                 SecurityStamp = row.GetValue<string>("security_stamp"),

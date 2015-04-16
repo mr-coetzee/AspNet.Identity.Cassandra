@@ -22,7 +22,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void GetSetLockoutEnabled()
         {
             // Create a user
-            var user = new CassandraUser(Guid.NewGuid()) {UserName = "lockoutUser1"};
+            var user = new User(Guid.NewGuid()) {UserName = "lockoutUser1"};
             await UserManager.CreateAsync(user);
 
             // Lockout should not be enabled by default
@@ -42,7 +42,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void GetSetLockoutEndDate()
         {
             // Create a user and enable lockout
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "lockoutUser2" };
+            var user = new User(Guid.NewGuid()) { UserName = "lockoutUser2" };
             await UserManager.CreateAsync(user);
             await UserManager.SetLockoutEnabledAsync(user.Id, true);
 
@@ -60,7 +60,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void LockUserOut()
         {
             // Create a user and enable lockout
-            var user = new CassandraUser(Guid.NewGuid()) {UserName = "lockoutUser3"};
+            var user = new User(Guid.NewGuid()) {UserName = "lockoutUser3"};
             await UserManager.CreateAsync(user);
             await UserManager.SetLockoutEnabledAsync(user.Id, true);
 

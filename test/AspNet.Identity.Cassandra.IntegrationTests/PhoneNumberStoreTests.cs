@@ -14,14 +14,14 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public override void TestSetup()
         {
             base.TestSetup();
-            UserManager.UserTokenProvider = new TotpSecurityStampBasedTokenProvider<CassandraUser, Guid>();
+            UserManager.UserTokenProvider = new TotpSecurityStampBasedTokenProvider<User, Guid>();
         }
 
         [Test]
         public async void GetSetPhoneNumber()
         {
             // Create a user
-            var user = new CassandraUser(Guid.NewGuid()) {UserName = "phoneUser1"};
+            var user = new User(Guid.NewGuid()) {UserName = "phoneUser1"};
             await UserManager.CreateAsync(user);
 
             // Should not have phone number by default
@@ -43,7 +43,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         {
             // Create a user with a phone number
             const string phone = "555-555-1212";
-            var user = new CassandraUser(Guid.NewGuid()) { UserName = "phoneUser2" };
+            var user = new User(Guid.NewGuid()) { UserName = "phoneUser2" };
             await UserManager.CreateAsync(user);
             await UserManager.SetPhoneNumberAsync(user.Id, phone);
 

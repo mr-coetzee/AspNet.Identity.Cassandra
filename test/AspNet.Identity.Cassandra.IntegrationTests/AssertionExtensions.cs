@@ -11,9 +11,16 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         /// <summary>
         /// Asserts that the user should have the same Id and UserName as the other user.
         /// </summary>
-        public static void ShouldBeEquivalentToUser(this CassandraUser user, CassandraUser otherUser)
+        public static void ShouldBeEquivalentToUser(this User user, User otherUser)
         {
             user.ShouldBeEquivalentTo(otherUser, opt => opt.Including(u => u.Id).Including(u => u.UserName));
+        }
+        /// <summary>
+        /// Asserts that the user should have the same Id and UserName as the other user.
+        /// </summary>
+        public static void ShouldBeEquivalentToRole(this Role role, Role otherRole)
+        {
+            role.ShouldBeEquivalentTo(otherRole, opt => opt.Including(r => r.Id).Including(r => r.Name));
         }
 
         /// <summary>

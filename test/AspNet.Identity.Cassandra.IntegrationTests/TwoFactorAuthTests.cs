@@ -15,7 +15,7 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void EnableDisableTwoFactor()
         {
             // Create a user
-            var user = new CassandraUser(Guid.NewGuid()) {UserName = "twoFactorUser1"};
+            var user = new User(Guid.NewGuid()) {UserName = "twoFactorUser1"};
             await UserManager.CreateAsync(user);
 
             // 2FA should be disabled by default

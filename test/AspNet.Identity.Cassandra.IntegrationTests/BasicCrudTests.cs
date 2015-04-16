@@ -15,12 +15,12 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void CreateUser()
         {
             // Create user
-            var originalUser = new CassandraUser(Guid.NewGuid()) { UserName = "testUser1" };
+            var originalUser = new User(Guid.NewGuid()) { UserName = "testUser1" };
             IdentityResult result = await UserManager.CreateAsync(originalUser);
             result.ShouldBeSuccess();
 
             // Try to find users by id and username
-            CassandraUser foundUser = await UserManager.FindByIdAsync(originalUser.Id);
+            User foundUser = await UserManager.FindByIdAsync(originalUser.Id);
             foundUser.ShouldBeEquivalentToUser(originalUser);
 
             foundUser = await UserManager.FindByNameAsync(originalUser.UserName);
@@ -31,9 +31,9 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void ChangeUsername()
         {
             // Create user, then lookup by Id
-            var originalUser = new CassandraUser(Guid.NewGuid()) { UserName = "originalUserName" };
+            var originalUser = new User(Guid.NewGuid()) { UserName = "originalUserName" };
             await UserManager.CreateAsync(originalUser);
-            CassandraUser foundUser = await UserManager.FindByIdAsync(originalUser.Id);
+            User foundUser = await UserManager.FindByIdAsync(originalUser.Id);
             
             // Change the username and update
             const string newUserName = "testUser2";
@@ -59,9 +59,9 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
         public async void DeleteUser()
         {
             // Create user, then lookup by Id
-            var originalUser = new CassandraUser(Guid.NewGuid()) { UserName = "deletedUser" };
+            var originalUser = new User(Guid.NewGuid()) { UserName = "deletedUser" };
             await UserManager.CreateAsync(originalUser);
-            CassandraUser foundUser = await UserManager.FindByIdAsync(originalUser.Id);
+            User foundUser = await UserManager.FindByIdAsync(originalUser.Id);
             
             // Delete the user
             IdentityResult result = await UserManager.DeleteAsync(foundUser);

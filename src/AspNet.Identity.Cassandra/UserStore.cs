@@ -8,10 +8,10 @@ using Microsoft.AspNet.Identity;
 
 namespace AspNet.Identity.Cassandra
 {
-    public class CassandraUserStore : IUserStore<CassandraUser, Guid>, IUserLoginStore<CassandraUser, Guid>, IUserClaimStore<CassandraUser, Guid>,
-                                      IUserPasswordStore<CassandraUser, Guid>, IUserSecurityStampStore<CassandraUser, Guid>,
-                                      IUserTwoFactorStore<CassandraUser, Guid>, IUserLockoutStore<CassandraUser, Guid>, 
-                                      IUserPhoneNumberStore<CassandraUser, Guid>, IUserEmailStore<CassandraUser, Guid>
+    public class UserStore : IUserStore<User, Guid>, IUserLoginStore<User, Guid>, IUserClaimStore<User, Guid>,
+                                      IUserPasswordStore<User, Guid>, IUserSecurityStampStore<User, Guid>,
+                                      IUserTwoFactorStore<User, Guid>, IUserLockoutStore<User, Guid>, 
+                                      IUserPhoneNumberStore<User, Guid>, IUserEmailStore<User, Guid>
     {
         // A cached copy of some completed tasks
         private static readonly Task<bool> TrueTask = Task.FromResult(true);
@@ -51,7 +51,7 @@ namespace AspNet.Identity.Cassandra
         /// <param name="session">The session for talking to the Cassandra keyspace.</param>
         /// <param name="disposeOfSession">Whether to dispose of the session instance when this object is disposed.</param>
         /// <param name="createSchema">Whether to create the schema tables if they don't exist.</param>
-        public CassandraUserStore(ISession session, bool disposeOfSession = false, bool createSchema = true)
+        public UserStore(ISession session, bool disposeOfSession = false, bool createSchema = true)
         {
             _session = session;
             _disposeOfSession = disposeOfSession;
@@ -137,7 +137,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Insert a new user.
         /// </summary>
-        public async Task CreateAsync(CassandraUser user)
+        public async Task CreateAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -174,7 +174,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Update a user.
         /// </summary>
-        public async Task UpdateAsync(CassandraUser user)
+        public async Task UpdateAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -244,7 +244,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Delete a user.
         /// </summary>
-        public async Task DeleteAsync(CassandraUser user)
+        public async Task DeleteAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -278,19 +278,19 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Finds a user by userId.
         /// </summary>
-        public async Task<CassandraUser> FindByIdAsync(Guid userId)
+        public async Task<User> FindByIdAsync(Guid userId)
         {
             PreparedStatement prepared = await _findById;
             BoundStatement bound = prepared.Bind(userId);
 
             RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
-            return CassandraUser.FromRow(rows.SingleOrDefault());
+            return User.FromRow(rows.SingleOrDefault());
         }
 
         /// <summary>
         /// Find a user by name (assumes usernames are unique).
         /// </summary>
-        public async Task<CassandraUser> FindByNameAsync(string userName)
+        public async Task<User> FindByNameAsync(string userName)
         {
             if (string.IsNullOrWhiteSpace(userName)) throw new ArgumentException("userName cannot be null or empty", "userName");
             
@@ -298,13 +298,13 @@ namespace AspNet.Identity.Cassandra
             BoundStatement bound = prepared.Bind(userName);
 
             RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
-            return CassandraUser.FromRow(rows.SingleOrDefault());
+            return User.FromRow(rows.SingleOrDefault());
         }
         
         /// <summary>
         /// Adds a user login with the specified provider and key
         /// </summary>
-        public async Task AddLoginAsync(CassandraUser user, UserLoginInfo login)
+        public async Task AddLoginAsync(User user, UserLoginInfo login)
         {
             if (user == null) throw new ArgumentNullException("user");
             if (login == null) throw new ArgumentNullException("login");
@@ -324,7 +324,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Removes the user login with the specified combination if it exists
         /// </summary>
-        public async Task RemoveLoginAsync(CassandraUser user, UserLoginInfo login)
+        public async Task RemoveLoginAsync(User user, UserLoginInfo login)
         {
             if (user == null) throw new ArgumentNullException("user");
             if (login == null) throw new ArgumentNullException("login");
@@ -344,7 +344,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns the linked accounts for this user
         /// </summary>
-        public async Task<IList<UserLoginInfo>> GetLoginsAsync(CassandraUser user)
+        public async Task<IList<UserLoginInfo>> GetLoginsAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -358,7 +358,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns the user associated with this login
         /// </summary>
-        public async Task<CassandraUser> FindAsync(UserLoginInfo login)
+        public async Task<User> FindAsync(UserLoginInfo login)
         {
             if (login == null) throw new ArgumentNullException("login");
 
@@ -374,13 +374,13 @@ namespace AspNet.Identity.Cassandra
             bound = prepared.Bind(loginResult.GetValue<Guid>("userid"));
 
             RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
-            return CassandraUser.FromRow(rows.SingleOrDefault());
+            return User.FromRow(rows.SingleOrDefault());
         }
 
         /// <summary>
         /// Returns the claims for the user with the issuer set
         /// </summary>
-        public async Task<IList<Claim>> GetClaimsAsync(CassandraUser user)
+        public async Task<IList<Claim>> GetClaimsAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -394,7 +394,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Add a new user claim
         /// </summary>
-        public async Task AddClaimAsync(CassandraUser user, Claim claim)
+        public async Task AddClaimAsync(User user, Claim claim)
         {
             if (user == null) throw new ArgumentNullException("user");
             if (claim == null) throw new ArgumentNullException("claim");
@@ -407,7 +407,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Remove a user claim
         /// </summary>
-        public async Task RemoveClaimAsync(CassandraUser user, Claim claim)
+        public async Task RemoveClaimAsync(User user, Claim claim)
         {
             if (user == null) throw new ArgumentNullException("user");
             if (claim == null) throw new ArgumentNullException("claim");
@@ -421,7 +421,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Set the user password hash
         /// </summary>
-        public Task SetPasswordHashAsync(CassandraUser user, string passwordHash)
+        public Task SetPasswordHashAsync(User user, string passwordHash)
         {
             if (user == null) throw new ArgumentNullException("user");
             
@@ -433,7 +433,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Get the user password hash
         /// </summary>
-        public Task<string> GetPasswordHashAsync(CassandraUser user)
+        public Task<string> GetPasswordHashAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return Task.FromResult(user.PasswordHash);
@@ -442,7 +442,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns true if a user has a password set
         /// </summary>
-        public Task<bool> HasPasswordAsync(CassandraUser user)
+        public Task<bool> HasPasswordAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return string.IsNullOrEmpty(user.PasswordHash) ? FalseTask : TrueTask;
@@ -451,7 +451,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Set the security stamp for the user
         /// </summary>
-        public Task SetSecurityStampAsync(CassandraUser user, string stamp)
+        public Task SetSecurityStampAsync(User user, string stamp)
         {
             if (user == null) throw new ArgumentNullException("user");
             if (stamp == null) throw new ArgumentNullException("stamp");
@@ -463,7 +463,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Get the user security stamp
         /// </summary>
-        public Task<string> GetSecurityStampAsync(CassandraUser user)
+        public Task<string> GetSecurityStampAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return Task.FromResult(user.SecurityStamp);
@@ -472,7 +472,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Sets whether two factor authentication is enabled for the user
         /// </summary>
-        public Task SetTwoFactorEnabledAsync(CassandraUser user, bool enabled)
+        public Task SetTwoFactorEnabledAsync(User user, bool enabled)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -483,7 +483,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns whether two factor authentication is enabled for the user
         /// </summary>
-        public Task<bool> GetTwoFactorEnabledAsync(CassandraUser user)
+        public Task<bool> GetTwoFactorEnabledAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return Task.FromResult(user.IsTwoFactorEnabled);
@@ -493,7 +493,7 @@ namespace AspNet.Identity.Cassandra
         /// Returns the DateTimeOffset that represents the end of a user's lockout, any time in the past should be considered
         /// not locked out.
         /// </summary>
-        public Task<DateTimeOffset> GetLockoutEndDateAsync(CassandraUser user)
+        public Task<DateTimeOffset> GetLockoutEndDateAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return Task.FromResult(user.LockoutEndDate);
@@ -502,7 +502,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Locks a user out until the specified end date (set to a past date, to unlock a user)
         /// </summary>
-        public Task SetLockoutEndDateAsync(CassandraUser user, DateTimeOffset lockoutEnd)
+        public Task SetLockoutEndDateAsync(User user, DateTimeOffset lockoutEnd)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -513,7 +513,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Used to record when an attempt to access the user has failed
         /// </summary>
-        public Task<int> IncrementAccessFailedCountAsync(CassandraUser user)
+        public Task<int> IncrementAccessFailedCountAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -526,7 +526,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Used to reset the access failed count, typically after the account is successfully accessed
         /// </summary>
-        public Task ResetAccessFailedCountAsync(CassandraUser user)
+        public Task ResetAccessFailedCountAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -539,7 +539,7 @@ namespace AspNet.Identity.Cassandra
         /// Returns the current number of failed access attempts.  This number usually will be reset whenever the password is
         /// verified or the account is locked out.
         /// </summary>
-        public Task<int> GetAccessFailedCountAsync(CassandraUser user)
+        public Task<int> GetAccessFailedCountAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -549,7 +549,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns whether the user can be locked out.
         /// </summary>
-        public Task<bool> GetLockoutEnabledAsync(CassandraUser user)
+        public Task<bool> GetLockoutEnabledAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -559,7 +559,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Sets whether the user can be locked out.
         /// </summary>
-        public Task SetLockoutEnabledAsync(CassandraUser user, bool enabled)
+        public Task SetLockoutEnabledAsync(User user, bool enabled)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -570,7 +570,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns the user associated with this email
         /// </summary>
-        public async Task<CassandraUser> FindByEmailAsync(string email)
+        public async Task<User> FindByEmailAsync(string email)
         {
             if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("email cannot be null or empty", "email");
 
@@ -578,13 +578,13 @@ namespace AspNet.Identity.Cassandra
             BoundStatement bound = prepared.Bind(email);
 
             RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
-            return CassandraUser.FromRow(rows.SingleOrDefault());
+            return User.FromRow(rows.SingleOrDefault());
         }
 
         /// <summary>
         /// Set the user email
         /// </summary>
-        public Task SetEmailAsync(CassandraUser user, string email)
+        public Task SetEmailAsync(User user, string email)
         {
             if (user == null) throw new ArgumentNullException("user");
             if (email == null) throw new ArgumentNullException("email");
@@ -596,7 +596,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Get the user email
         /// </summary>
-        public Task<string> GetEmailAsync(CassandraUser user)
+        public Task<string> GetEmailAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return Task.FromResult(user.Email);
@@ -605,7 +605,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns true if the user email is confirmed
         /// </summary>
-        public Task<bool> GetEmailConfirmedAsync(CassandraUser user)
+        public Task<bool> GetEmailConfirmedAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return Task.FromResult(user.IsEmailConfirmed);
@@ -614,7 +614,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Sets whether the user email is confirmed
         /// </summary>
-        public Task SetEmailConfirmedAsync(CassandraUser user, bool confirmed)
+        public Task SetEmailConfirmedAsync(User user, bool confirmed)
         {
             if (user == null) throw new ArgumentNullException("user");
 
@@ -625,7 +625,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Set the user's phone number
         /// </summary>
-        public Task SetPhoneNumberAsync(CassandraUser user, string phoneNumber)
+        public Task SetPhoneNumberAsync(User user, string phoneNumber)
         {
             if (user == null) throw new ArgumentNullException("user");
             if (phoneNumber == null) throw new ArgumentNullException("phoneNumber");
@@ -637,7 +637,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Get the user phone number
         /// </summary>
-        public Task<string> GetPhoneNumberAsync(CassandraUser user)
+        public Task<string> GetPhoneNumberAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return Task.FromResult(user.PhoneNumber);
@@ -646,7 +646,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns true if the user phone number is confirmed
         /// </summary>
-        public Task<bool> GetPhoneNumberConfirmedAsync(CassandraUser user)
+        public Task<bool> GetPhoneNumberConfirmedAsync(User user)
         {
             if (user == null) throw new ArgumentNullException("user");
             return Task.FromResult(user.IsPhoneNumberConfirmed);
@@ -655,7 +655,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Sets whether the user phone number is confirmed
         /// </summary>
-        public Task SetPhoneNumberConfirmedAsync(CassandraUser user, bool confirmed)
+        public Task SetPhoneNumberConfirmedAsync(User user, bool confirmed)
         {
             if (user == null) throw new ArgumentNullException("user");
 

@@ -12,8 +12,10 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
     {
         private const string TestKeyspaceFormat = "aspnet_identity_{0}";
 
-        protected UserManager<CassandraUser, Guid> UserManager;
-        private CassandraUserStore _userStore;
+        protected RoleManager<Role, Guid> RoleManager;
+        protected UserManager<User, Guid> UserManager;
+        private UserStore _userStore;
+        private RoleStore _roleStore;
         private ISession _session;
         private string _keyspaceName;
 
@@ -33,10 +35,15 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
             _session.CreateKeyspaceIfNotExists(_keyspaceName);
             _session.ChangeKeyspace(_keyspaceName);
 
-            _userStore = new CassandraUserStore(_session);
+            _userStore = new UserStore(_session);
 
-            // Exercise the UserManager class in tests since that's how consumers will use CassandarUserStore
-            UserManager = new UserManager<CassandraUser, Guid>(_userStore);
+            // Exercise the UserManager class in tests since that's how consumers will use CassandraUserStore
+            UserManager = new UserManager<User, Guid>(_userStore);
+
+            _roleStore = new RoleStore(_session);
+
+            // Exercise the RoleManager class in tests since that's how consumers will use CassandraRoleStore
+            RoleManager = new RoleManager<Role, Guid>(_roleStore);
         }
 
         [TestFixtureTearDown]
@@ -46,6 +53,10 @@ namespace AspNet.Identity.Cassandra.IntegrationTests
 
             UserManager.Dispose();
             _userStore.Dispose();
+            
+            RoleManager.Dispose();
+            _roleStore.Dispose();
+
             _session.Dispose();
         }
     }

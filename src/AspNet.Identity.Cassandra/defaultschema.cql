@@ -72,3 +72,18 @@ CREATE TABLE IF NOT EXISTS claims (
     value text,
     PRIMARY KEY (userid, type, value)
 );
+
+CREATE TABLE IF NOT EXISTS roles (
+    id uuid,
+    name text,
+    description text,
+    PRIMARY KEY (id)
+);
+
+// Roles, keyed by name
+CREATE TABLE IF NOT EXISTS roles_by_name (
+    name text,
+    id uuid,
+    description text,
+    PRIMARY KEY (name)
+);
