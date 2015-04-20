@@ -73,6 +73,14 @@ namespace AspNet.Identity.Cassandra
         public bool IsEmailConfirmed { get; set; }
 
         /// <summary>
+        /// Default constructor with NewGuid
+        /// </summary>
+        public User()
+            : this(Guid.NewGuid(), null, null)
+        {
+        }
+
+        /// <summary>
         /// Creates a new CassandraUser with the Id specified.
         /// </summary>
         public User(Guid userId)

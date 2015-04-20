@@ -27,6 +27,14 @@ namespace AspNet.Identity.Cassandra
         public string Description { get; set; }
 
         /// <summary>
+        /// Default constructor with NewGuid
+        /// </summary>
+        public Role()
+            : this(Guid.NewGuid(), null, null)
+        {
+        }
+
+        /// <summary>
         /// Creates a new role with the Id specified.
         /// </summary>
         public Role(Guid id)
