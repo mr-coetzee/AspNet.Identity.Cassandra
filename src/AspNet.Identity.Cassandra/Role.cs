@@ -14,7 +14,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// The unique Id of the role.
         /// </summary>
-        public Guid Id { get; private set; }
+        public Guid Id { get; set; }
 
         /// <summary>
         /// The role name.

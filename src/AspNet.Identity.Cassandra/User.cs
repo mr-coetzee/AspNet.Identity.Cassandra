@@ -15,7 +15,7 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// The unique Id of the user.
         /// </summary>
-        public Guid Id { get; private set; }
+        public Guid Id { get; set; }
 
         /// <summary>
         /// The user's username.
@@ -126,7 +126,7 @@ namespace AspNet.Identity.Cassandra
         {
             if (row == null) return null;
 
-            var user = new User(row.GetValue<Guid>("userid"), row.GetValue<string>("username"), row.GetValue<string>("email"))
+            var user = new User(row.GetValue<Guid>("id"), row.GetValue<string>("username"), row.GetValue<string>("email"))
             {
                 PasswordHash = row.GetValue<string>("password_hash"),
                 SecurityStamp = row.GetValue<string>("security_stamp"),

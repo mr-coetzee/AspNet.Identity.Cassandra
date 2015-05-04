@@ -1,6 +1,6 @@
 // Users, keyed by user id
 CREATE TABLE IF NOT EXISTS users (
-    userid uuid,
+    id uuid,
     username text,
     password_hash text,
     security_stamp text,
@@ -12,13 +12,13 @@ CREATE TABLE IF NOT EXISTS users (
     phone_number_confirmed boolean,
     email text,
     email_confirmed boolean,
-    PRIMARY KEY (userid)
+    PRIMARY KEY (id)
 );
 
 // Users, keyed by username
 CREATE TABLE IF NOT EXISTS users_by_username (
     username text,
-    userid uuid,
+    id uuid,
     password_hash text,
     security_stamp text,
     two_factor_enabled boolean,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS users_by_username (
 // Users, keyed by email address
 CREATE TABLE IF NOT EXISTS users_by_email (
     email text,
-    userid uuid,
+    id uuid,
     username text,
     password_hash text,
     security_stamp text,
@@ -51,26 +51,26 @@ CREATE TABLE IF NOT EXISTS users_by_email (
 
 // Logins, keyed by user id
 CREATE TABLE IF NOT EXISTS logins (
-    userid uuid,
+    id uuid,
     login_provider text,
     provider_key text,
-    PRIMARY KEY(userid, login_provider, provider_key)
+    PRIMARY KEY(id, login_provider, provider_key)
 );
 
 // Logins, keyed by provider and provider key
 CREATE TABLE IF NOT EXISTS logins_by_provider (
     login_provider text,
     provider_key text,
-    userid uuid,
+    id uuid,
     PRIMARY KEY ((login_provider, provider_key))
 );
 
 // Claims, keyed by user id
 CREATE TABLE IF NOT EXISTS claims (
-    userid uuid,
+    id uuid,
     type text,
     value text,
-    PRIMARY KEY (userid, type, value)
+    PRIMARY KEY (id, type, value)
 );
 
 CREATE TABLE IF NOT EXISTS roles (

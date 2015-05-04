@@ -32,14 +32,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Cassandra">
-      <HintPath>..\packages\CassandraCSharpDriver.2.0.3\lib\net40\Cassandra.dll</HintPath>
-    </Reference>
-    <Reference Include="Cassandra.Data">
-      <HintPath>..\packages\CassandraCSharpDriver.2.0.3\lib\net40\Cassandra.Data.dll</HintPath>
-    </Reference>
-    <Reference Include="Cassandra.Data.Linq">
-      <HintPath>..\packages\CassandraCSharpDriver.2.0.3\lib\net40\Cassandra.Data.Linq.dll</HintPath>
+    <Reference Include="Cassandra, Version=2.5.0.0, Culture=neutral, PublicKeyToken=10b231fbfc8c4b4d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\CassandraCSharpDriver.2.5.2\lib\net40\Cassandra.dll</HintPath>
     </Reference>
     <Reference Include="LZ4">
       <HintPath>..\packages\lz4net.1.0.5.93\lib\net40-client\LZ4.dll</HintPath>

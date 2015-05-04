@@ -58,11 +58,11 @@ namespace AspNet.Identity.Cassandra
 
             // Create some reusable prepared statements so we pay the cost of preparing once, then bind multiple times
             _createUserByUserName = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
-                "INSERT INTO users_by_username (username, userid, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
+                "INSERT INTO users_by_username (username, id, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
                 "lockout_enabled, lockout_end_date, phone_number, phone_number_confirmed, email, email_confirmed) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
             _createUserByEmail = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
-                "INSERT INTO users_by_email (email, userid, username, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
+                "INSERT INTO users_by_email (email, id, username, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
                 "lockout_enabled, lockout_end_date, phone_number, phone_number_confirmed, email_confirmed) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
 
@@ -72,7 +72,7 @@ namespace AspNet.Identity.Cassandra
             // All the statements needed by the CreateAsync method
             _createUser = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
             {
-                _session.PrepareAsync("INSERT INTO users (userid, username, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
+                _session.PrepareAsync("INSERT INTO users (id, username, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
                                       "lockout_enabled, lockout_end_date, phone_number, phone_number_confirmed, email, email_confirmed) " +
                                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
                 _createUserByUserName.Value,
@@ -82,7 +82,7 @@ namespace AspNet.Identity.Cassandra
             // All the statements needed by the DeleteAsync method
             _deleteUser = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new[]
             {
-                _session.PrepareAsync("DELETE FROM users WHERE userid = ?"),
+                _session.PrepareAsync("DELETE FROM users WHERE id = ?"),
                 _deleteUserByUserName.Value,
                 _deleteUserByEmail.Value
             }));
@@ -92,7 +92,7 @@ namespace AspNet.Identity.Cassandra
             {
                 _session.PrepareAsync("UPDATE users SET username = ?, password_hash = ?, security_stamp = ?, two_factor_enabled = ?, access_failed_count = ?, " +
                                       "lockout_enabled = ?, lockout_end_date = ?, phone_number = ?, phone_number_confirmed = ?, email = ?, email_confirmed = ? " +
-                                      "WHERE userid = ?"),
+                                      "WHERE id = ?"),
                 _session.PrepareAsync("UPDATE users_by_username SET password_hash = ?, security_stamp = ?, two_factor_enabled = ?, access_failed_count = ?, " +
                                       "lockout_enabled = ?, lockout_end_date = ?, phone_number = ?, phone_number_confirmed = ?, email = ?, email_confirmed = ? " +
                                       "WHERE username = ?"),
@@ -105,29 +105,29 @@ namespace AspNet.Identity.Cassandra
                 _createUserByEmail.Value
             }));
             
-            _findById = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM users WHERE userid = ?"));
+            _findById = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM users WHERE id = ?"));
             _findByName = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM users_by_username WHERE username = ?"));
             _findByEmail = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM users_by_email WHERE email = ?"));
             
             _addLogin = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
             {
-                _session.PrepareAsync("INSERT INTO logins (userid, login_provider, provider_key) VALUES (?, ?, ?)"),
-                _session.PrepareAsync("INSERT INTO logins_by_provider (login_provider, provider_key, userid) VALUES (?, ?, ?)")
+                _session.PrepareAsync("INSERT INTO logins (id, login_provider, provider_key) VALUES (?, ?, ?)"),
+                _session.PrepareAsync("INSERT INTO logins_by_provider (login_provider, provider_key, id) VALUES (?, ?, ?)")
             }));
             _removeLogin = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
             {
-                _session.PrepareAsync("DELETE FROM logins WHERE userId = ? and login_provider = ? and provider_key = ?"),
+                _session.PrepareAsync("DELETE FROM logins WHERE id = ? and login_provider = ? and provider_key = ?"),
                 _session.PrepareAsync("DELETE FROM logins_by_provider WHERE login_provider = ? AND provider_key = ?")
             }));
-            _getLogins = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM logins WHERE userId = ?"));
+            _getLogins = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM logins WHERE id = ?"));
             _getLoginsByProvider = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
                 "SELECT * FROM logins_by_provider WHERE login_provider = ? AND provider_key = ?"));
 
-            _getClaims = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM claims WHERE userId = ?"));
+            _getClaims = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM claims WHERE id = ?"));
             _addClaim = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
-                "INSERT INTO claims (userid, type, value) VALUES (?, ?, ?)"));
+                "INSERT INTO claims (id, type, value) VALUES (?, ?, ?)"));
             _removeClaim = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
-                "DELETE FROM claims WHERE userId = ? AND type = ? AND value = ?"));
+                "DELETE FROM claims WHERE id = ? AND type = ? AND value = ?"));
 
             // Create the schema if necessary
             if (createSchema)
@@ -276,12 +276,12 @@ namespace AspNet.Identity.Cassandra
         }
 
         /// <summary>
-        /// Finds a user by userId.
+        /// Finds a user by id.
         /// </summary>
-        public async Task<User> FindByIdAsync(Guid userId)
+        public async Task<User> FindByIdAsync(Guid id)
         {
             PreparedStatement prepared = await _findById;
-            BoundStatement bound = prepared.Bind(userId);
+            BoundStatement bound = prepared.Bind(id);
 
             RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
             return User.FromRow(rows.SingleOrDefault());
@@ -371,7 +371,7 @@ namespace AspNet.Identity.Cassandra
                 return null;
 
             prepared = await _findById;
-            bound = prepared.Bind(loginResult.GetValue<Guid>("userid"));
+            bound = prepared.Bind(loginResult.GetValue<Guid>("id"));
 
             RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
             return User.FromRow(rows.SingleOrDefault());
