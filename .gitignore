@@ -109,3 +109,6 @@ Backup*/
 UpgradeLog*.XML
 .DS_Store
 *.userprefs
+
+.paket/*.targets
+paket-files/

@@ -1,0 +1,10 @@
+framework: netstandard2.0
+storage: none
+source https://www.nuget.org/api/v2
+
+nuget CassandraCSharpDriver
+nuget Microsoft.AspNetCore.Identity
+
+nuget Nunit
+nuget Nunit.Runners
+nuget FluentAssertions
