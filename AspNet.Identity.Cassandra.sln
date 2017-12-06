@@ -1,11 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2010
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNet.Identity.Cassandra", "AspNet.Identity.Cassandra\AspNet.Identity.Cassandra.csproj", "{6A15A151-B338-4498-8C05-CD9A1F1E333D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNet.Identity.Cassandra", "AspNet.Identity.Cassandra\AspNet.Identity.Cassandra.csproj", "{6A15A151-B338-4498-8C05-CD9A1F1E333D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNet.Identity.Cassandra.IntegrationTests", "AspNet.Identity.Cassandra.IntegrationTests\AspNet.Identity.Cassandra.IntegrationTests.csproj", "{342AC911-C623-4419-81F3-F6662C20587A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNet.Identity.Cassandra.IntegrationTests", "AspNet.Identity.Cassandra.IntegrationTests\AspNet.Identity.Cassandra.IntegrationTests.csproj", "{342AC911-C623-4419-81F3-F6662C20587A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{503E7308-6E58-4BAC-8148-E810518469A5}"
+	ProjectSection(SolutionItems) = preProject
+		LICENSE = LICENSE
+		paket.dependencies = paket.dependencies
+		paket.lock = paket.lock
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,5 +32,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F581E04A-3A94-41D8-914E-B2D0C7716E3A}
 	EndGlobalSection
 EndGlobal

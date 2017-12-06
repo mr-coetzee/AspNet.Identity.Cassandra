@@ -1,13 +1,12 @@
 ﻿using System;
 using Cassandra;
-using Microsoft.AspNetCore.Identity;
 
 namespace AspNet.Identity.Cassandra
 {
     /// <summary>
     /// Represents a user.
     /// </summary>
-    public class User 
+    public class User
     {
         private readonly string _originalUserName;
         private readonly string _originalEmail;

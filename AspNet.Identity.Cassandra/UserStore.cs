@@ -2,131 +2,141 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading;
 using System.Threading.Tasks;
 using Cassandra;
 using Microsoft.AspNetCore.Identity;
 
 namespace AspNet.Identity.Cassandra
 {
-    public class UserStore : IUserStore<User>, IUserLoginStore<User>, IUserClaimStore<User>,
-                                      IUserPasswordStore<User>, IUserSecurityStampStore<User>,
-                                      IUserTwoFactorStore<User>, IUserLockoutStore<User>, 
-                                      IUserPhoneNumberStore<User>, IUserEmailStore<User>
+   public class UserStore : IUserStore<User>
+        //, IUserLoginStore<User>, IUserClaimStore<User>,
+        //                              IUserPasswordStore<User>, IUserSecurityStampStore<User>,
+        //                              IUserTwoFactorStore<User>, IUserLockoutStore<User>, 
+        //                              IUserPhoneNumberStore<User>, IUserEmailStore<User>
     {
+        private bool isDisposed = false;
+        private readonly ISession session;
+        private readonly bool disposeOfSession;
+
         // A cached copy of some completed tasks
         private static readonly Task<bool> TrueTask = Task.FromResult(true);
         private static readonly Task<bool> FalseTask = Task.FromResult(false);
         private static readonly Task CompletedTask = TrueTask;
 
-        private readonly ISession _session;
-        private readonly bool _disposeOfSession;
-
         // Reusable prepared statements, lazy evaluated
-        private readonly AsyncLazy<PreparedStatement> _createUserByUserName;
-        private readonly AsyncLazy<PreparedStatement> _createUserByEmail;
-        private readonly AsyncLazy<PreparedStatement> _deleteUserByUserName;
-        private readonly AsyncLazy<PreparedStatement> _deleteUserByEmail; 
+        private readonly AsyncLazy<PreparedStatement> createUserByUserName;
+        private readonly AsyncLazy<PreparedStatement> createUserByEmail;
+        private readonly AsyncLazy<PreparedStatement> deleteUserByUserName;
+        private readonly AsyncLazy<PreparedStatement> deleteUserByEmail; 
 
-        private readonly AsyncLazy<PreparedStatement[]> _createUser;
-        private readonly AsyncLazy<PreparedStatement[]> _updateUser;
-        private readonly AsyncLazy<PreparedStatement[]> _deleteUser;
+        private readonly AsyncLazy<PreparedStatement[]> createUser;
+        private readonly AsyncLazy<PreparedStatement[]> updateUser;
+        private readonly AsyncLazy<PreparedStatement[]> deleteUser;
 
-        private readonly AsyncLazy<PreparedStatement> _findById;
-        private readonly AsyncLazy<PreparedStatement> _findByName;
-        private readonly AsyncLazy<PreparedStatement> _findByEmail; 
+        private readonly AsyncLazy<PreparedStatement> findById;
+        private readonly AsyncLazy<PreparedStatement> findByName;
+        private readonly AsyncLazy<PreparedStatement> findByEmail; 
 
-        private readonly AsyncLazy<PreparedStatement[]> _addLogin;
-        private readonly AsyncLazy<PreparedStatement[]> _removeLogin;
-        private readonly AsyncLazy<PreparedStatement> _getLogins;
-        private readonly AsyncLazy<PreparedStatement> _getLoginsByProvider;
+        private readonly AsyncLazy<PreparedStatement[]> addLogin;
+        private readonly AsyncLazy<PreparedStatement[]> removeLogin;
+        private readonly AsyncLazy<PreparedStatement> getLogins;
+        private readonly AsyncLazy<PreparedStatement> getLoginsByProvider;
 
-        private readonly AsyncLazy<PreparedStatement> _getClaims;
-        private readonly AsyncLazy<PreparedStatement> _addClaim;
-        private readonly AsyncLazy<PreparedStatement> _removeClaim;
+        private readonly AsyncLazy<PreparedStatement> getClaims;
+        private readonly AsyncLazy<PreparedStatement> addClaim;
+        private readonly AsyncLazy<PreparedStatement> removeClaim;
         
+
+        enum CreateUser {
+            Users = 0,
+            UsersByUserName = 1,
+            UsersByEmail = 2
+        };
+
         /// <summary>
         /// Creates a new instance of CassandraUserStore that will use the provided ISession instance to talk to Cassandra.  Optionally,
         /// specify whether the ISession instance should be Disposed when this class is Disposed.
         /// </summary>
-        /// <param name="session">The session for talking to the Cassandra keyspace.</param>
+        /// <param name="session">The session for talking to the Cassandra key-space.</param>
         /// <param name="disposeOfSession">Whether to dispose of the session instance when this object is disposed.</param>
         /// <param name="createSchema">Whether to create the schema tables if they don't exist.</param>
         public UserStore(ISession session, bool disposeOfSession = false, bool createSchema = true)
         {
-            _session = session;
-            _disposeOfSession = disposeOfSession;
+            this.session = session;
+            this.disposeOfSession = disposeOfSession;
 
             // Create some reusable prepared statements so we pay the cost of preparing once, then bind multiple times
-            _createUserByUserName = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
+            createUserByUserName = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync(
                 "INSERT INTO users_by_username (username, id, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
                 "lockout_enabled, lockout_end_date, phone_number, phone_number_confirmed, email, email_confirmed) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
-            _createUserByEmail = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
+            createUserByEmail = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync(
                 "INSERT INTO users_by_email (email, id, username, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
                 "lockout_enabled, lockout_end_date, phone_number, phone_number_confirmed, email_confirmed) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
 
-            _deleteUserByUserName = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("DELETE FROM users_by_username WHERE username = ?"));
-            _deleteUserByEmail = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("DELETE FROM users_by_email WHERE email = ?"));
-            
+            deleteUserByUserName = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync("DELETE FROM users_by_username WHERE username = ?"));
+            deleteUserByEmail = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync("DELETE FROM users_by_email WHERE email = ?"));
+
             // All the statements needed by the CreateAsync method
-            _createUser = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
+            createUser = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
             {
-                _session.PrepareAsync("INSERT INTO users (id, username, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
+                this.session.PrepareAsync("INSERT INTO users (id, username, password_hash, security_stamp, two_factor_enabled, access_failed_count, " +
                                       "lockout_enabled, lockout_end_date, phone_number, phone_number_confirmed, email, email_confirmed) " +
                                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
-                _createUserByUserName.Value,
-                _createUserByEmail.Value
+                createUserByUserName.Value,
+                createUserByEmail.Value
             }));
 
             // All the statements needed by the DeleteAsync method
-            _deleteUser = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new[]
+            deleteUser = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new[]
             {
-                _session.PrepareAsync("DELETE FROM users WHERE id = ?"),
-                _deleteUserByUserName.Value,
-                _deleteUserByEmail.Value
+                this.session.PrepareAsync("DELETE FROM users WHERE id = ?"),
+                deleteUserByUserName.Value,
+                deleteUserByEmail.Value
             }));
 
             // All the statements needed by the UpdateAsync method
-            _updateUser = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
+            updateUser = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
             {
-                _session.PrepareAsync("UPDATE users SET username = ?, password_hash = ?, security_stamp = ?, two_factor_enabled = ?, access_failed_count = ?, " +
+                this.session.PrepareAsync("UPDATE users SET username = ?, password_hash = ?, security_stamp = ?, two_factor_enabled = ?, access_failed_count = ?, " +
                                       "lockout_enabled = ?, lockout_end_date = ?, phone_number = ?, phone_number_confirmed = ?, email = ?, email_confirmed = ? " +
                                       "WHERE id = ?"),
-                _session.PrepareAsync("UPDATE users_by_username SET password_hash = ?, security_stamp = ?, two_factor_enabled = ?, access_failed_count = ?, " +
+                this.session.PrepareAsync("UPDATE users_by_username SET password_hash = ?, security_stamp = ?, two_factor_enabled = ?, access_failed_count = ?, " +
                                       "lockout_enabled = ?, lockout_end_date = ?, phone_number = ?, phone_number_confirmed = ?, email = ?, email_confirmed = ? " +
                                       "WHERE username = ?"),
-                _deleteUserByUserName.Value,
-                _createUserByUserName.Value,
-                _session.PrepareAsync("UPDATE users_by_email SET username = ?, password_hash = ?, security_stamp = ?, two_factor_enabled = ?, access_failed_count = ?, " +
+                deleteUserByUserName.Value,
+                createUserByUserName.Value,
+                this.session.PrepareAsync("UPDATE users_by_email SET username = ?, password_hash = ?, security_stamp = ?, two_factor_enabled = ?, access_failed_count = ?, " +
                                       "lockout_enabled = ?, lockout_end_date = ?, phone_number = ?, phone_number_confirmed = ?, email_confirmed = ? " +
                                       "WHERE email = ?"),
-                _deleteUserByEmail.Value,
-                _createUserByEmail.Value
+                deleteUserByEmail.Value,
+                createUserByEmail.Value
             }));
-            
-            _findById = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM users WHERE id = ?"));
-            _findByName = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM users_by_username WHERE username = ?"));
-            _findByEmail = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM users_by_email WHERE email = ?"));
-            
-            _addLogin = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
+
+            findById = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync("SELECT * FROM users WHERE id = ?"));
+            findByName = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync("SELECT * FROM users_by_username WHERE username = ?"));
+            findByEmail = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync("SELECT * FROM users_by_email WHERE email = ?"));
+
+            addLogin = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
             {
-                _session.PrepareAsync("INSERT INTO logins (id, login_provider, provider_key) VALUES (?, ?, ?)"),
-                _session.PrepareAsync("INSERT INTO logins_by_provider (login_provider, provider_key, id) VALUES (?, ?, ?)")
+                this.session.PrepareAsync("INSERT INTO logins (id, login_provider, provider_key) VALUES (?, ?, ?)"),
+                this.session.PrepareAsync("INSERT INTO logins_by_provider (login_provider, provider_key, id) VALUES (?, ?, ?)")
             }));
-            _removeLogin = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
+            removeLogin = new AsyncLazy<PreparedStatement[]>(() => Task.WhenAll(new []
             {
-                _session.PrepareAsync("DELETE FROM logins WHERE id = ? and login_provider = ? and provider_key = ?"),
-                _session.PrepareAsync("DELETE FROM logins_by_provider WHERE login_provider = ? AND provider_key = ?")
+                this.session.PrepareAsync("DELETE FROM logins WHERE id = ? and login_provider = ? and provider_key = ?"),
+                this.session.PrepareAsync("DELETE FROM logins_by_provider WHERE login_provider = ? AND provider_key = ?")
             }));
-            _getLogins = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM logins WHERE id = ?"));
-            _getLoginsByProvider = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
+            getLogins = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync("SELECT * FROM logins WHERE id = ?"));
+            getLoginsByProvider = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync(
                 "SELECT * FROM logins_by_provider WHERE login_provider = ? AND provider_key = ?"));
 
-            _getClaims = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync("SELECT * FROM claims WHERE id = ?"));
-            _addClaim = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
+            getClaims = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync("SELECT * FROM claims WHERE id = ?"));
+            addClaim = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync(
                 "INSERT INTO claims (id, type, value) VALUES (?, ?, ?)"));
-            _removeClaim = new AsyncLazy<PreparedStatement>(() => _session.PrepareAsync(
+            removeClaim = new AsyncLazy<PreparedStatement>(() => this.session.PrepareAsync(
                 "DELETE FROM claims WHERE id = ? AND type = ? AND value = ?"));
 
             // Create the schema if necessary
@@ -137,14 +147,18 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Insert a new user.
         /// </summary>
-        public async Task CreateAsync(User user)
+        public async Task<IdentityResult> CreateAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (user == null) throw new ArgumentNullException("user");
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            cancellationToken.ThrowIfCancellationRequested();
 
             // TODO:  Support uniqueness for usernames/emails at the C* level using LWT?
 
-            PreparedStatement[] prepared = await _createUser;
+            PreparedStatement[] prepared = await createUser;
             var batch = new BatchStatement();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // INSERT INTO users ...
             batch.Add(prepared[0].Bind(user.Id, user.UserName, user.PasswordHash, user.SecurityStamp, user.IsTwoFactorEnabled, user.AccessFailedCount,
@@ -168,18 +182,24 @@ namespace AspNet.Identity.Cassandra
                                            user.IsPhoneNumberConfirmed, user.IsEmailConfirmed));
             }
             
-            await _session.ExecuteAsync(batch).ConfigureAwait(false);
+            await session.ExecuteAsync(batch).ConfigureAwait(false);
+
+            return IdentityResult.Success;
         }
 
         /// <summary>
         /// Update a user.
         /// </summary>
-        public async Task UpdateAsync(User user)
+        public async Task<IdentityResult> UpdateAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (user == null) throw new ArgumentNullException("user");
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            cancellationToken.ThrowIfCancellationRequested();
 
-            PreparedStatement[] prepared = await _updateUser;
+            PreparedStatement[] prepared = await updateUser;
             var batch = new BatchStatement();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // UPDATE users ...
             batch.Add(prepared[0].Bind(user.UserName, user.PasswordHash, user.SecurityStamp, user.IsTwoFactorEnabled, user.AccessFailedCount,
@@ -187,8 +207,7 @@ namespace AspNet.Identity.Cassandra
                                        user.IsEmailConfirmed, user.Id));
 
             // See if the username changed so we can decide whether we need a different users_by_username record
-            string oldUserName;
-            if (user.HasUserNameChanged(out oldUserName) == false && string.IsNullOrEmpty(user.UserName) == false)
+            if (user.HasUserNameChanged(out string oldUserName) == false && string.IsNullOrEmpty(user.UserName) == false)
             {
                 // UPDATE users_by_username ... (since username hasn't changed)
                 batch.Add(prepared[1].Bind(user.PasswordHash, user.SecurityStamp, user.IsTwoFactorEnabled, user.AccessFailedCount,
@@ -213,8 +232,7 @@ namespace AspNet.Identity.Cassandra
             }
 
             // See if the email changed so we can decide if we need a different users_by_email record
-            string oldEmail;
-            if (user.HasEmailChanged(out oldEmail) == false && string.IsNullOrEmpty(user.Email) == false)
+            if (user.HasEmailChanged(out string oldEmail) == false && string.IsNullOrEmpty(user.Email) == false)
             {
                 // UPDATE users_by_email ... (since email hasn't changed)
                 batch.Add(prepared[4].Bind(user.UserName, user.PasswordHash, user.SecurityStamp, user.IsTwoFactorEnabled, user.AccessFailedCount,
@@ -228,7 +246,7 @@ namespace AspNet.Identity.Cassandra
                 {
                     batch.Add(prepared[5].Bind(oldEmail));
                 }
-                
+
                 // INSERT INTO users_by_email ... (insert new record since email changed)
                 if (string.IsNullOrEmpty(user.Email) == false)
                 {
@@ -237,67 +255,77 @@ namespace AspNet.Identity.Cassandra
                                            user.IsPhoneNumberConfirmed, user.IsEmailConfirmed));
                 }
             }
-            
-            await _session.ExecuteAsync(batch).ConfigureAwait(false);
+
+            await session.ExecuteAsync(batch).ConfigureAwait(false);
+
+            return IdentityResult.Success;
         }
 
         /// <summary>
         /// Delete a user.
         /// </summary>
-        public async Task DeleteAsync(User user)
+        public async Task<IdentityResult> DeleteAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (user == null) throw new ArgumentNullException("user");
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
 
-            PreparedStatement[] prepared = await _deleteUser;
+            PreparedStatement[] prepared = await deleteUser;
             var batch = new BatchStatement();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // DELETE FROM users ...
             batch.Add(prepared[0].Bind(user.Id));
 
             // Make sure the username didn't change before deleting from users_by_username (not sure this is possible, but protect ourselves anyway)
-            string userName;
-            if (user.HasUserNameChanged(out userName) == false)
-                userName = user.UserName;
+            if (user.HasUserNameChanged(out string userName) == false) userName = user.UserName;
 
             // DELETE FROM users_by_username ...
-            if (string.IsNullOrEmpty(userName) == false)
-                batch.Add(prepared[1].Bind(userName));
+            if (string.IsNullOrEmpty(userName) == false) batch.Add(prepared[1].Bind(userName));
 
             // Make sure email didn't change before deleting from users_by_email (also not sure this is possible)
-            string email;
-            if (user.HasEmailChanged(out email) == false)
-                email = user.Email;
+            if (user.HasEmailChanged(out string email) == false) email = user.Email;
 
             // DELETE FROM users_by_email ...
-            if (string.IsNullOrEmpty(email) == false)
-                batch.Add(prepared[2].Bind(email));
+            if (string.IsNullOrEmpty(email) == false) batch.Add(prepared[2].Bind(email));
             
-            await _session.ExecuteAsync(batch).ConfigureAwait(false);
+            await session.ExecuteAsync(batch).ConfigureAwait(false);
+
+            return IdentityResult.Success;
         }
 
         /// <summary>
         /// Finds a user by id.
         /// </summary>
-        public async Task<User> FindByIdAsync(Guid id)
+        public async Task<User> FindByIdAsync(string userId, CancellationToken cancellationToken = default(CancellationToken))
         {
-            PreparedStatement prepared = await _findById;
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (userId == null) throw new ArgumentNullException(nameof(userId));
+            cancellationToken.ThrowIfCancellationRequested();
+
+            Guid id = Guid.Parse(userId);
+            PreparedStatement prepared = await findById;
             BoundStatement bound = prepared.Bind(id);
 
-            RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
+            RowSet rows = await session.ExecuteAsync(bound).ConfigureAwait(false);
             return User.FromRow(rows.SingleOrDefault());
         }
 
         /// <summary>
         /// Find a user by name (assumes usernames are unique).
         /// </summary>
-        public async Task<User> FindByNameAsync(string userName)
+        public async Task<User> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (string.IsNullOrWhiteSpace(userName)) throw new ArgumentException("userName cannot be null or empty", "userName");
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (string.IsNullOrWhiteSpace(normalizedUserName)) throw new ArgumentException(nameof(normalizedUserName));
+            cancellationToken.ThrowIfCancellationRequested();
             
-            PreparedStatement prepared = await _findByName;
-            BoundStatement bound = prepared.Bind(userName);
+            PreparedStatement prepared = await findByName;
+            BoundStatement bound = prepared.Bind(normalizedUserName);
 
-            RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
+            RowSet rows = await session.ExecuteAsync(bound).ConfigureAwait(false);
             return User.FromRow(rows.SingleOrDefault());
         }
         
@@ -309,7 +337,7 @@ namespace AspNet.Identity.Cassandra
             if (user == null) throw new ArgumentNullException("user");
             if (login == null) throw new ArgumentNullException("login");
 
-            PreparedStatement[] prepared = await _addLogin;
+            PreparedStatement[] prepared = await addLogin;
             var batch = new BatchStatement();
 
             // INSERT INTO logins ...
@@ -318,7 +346,7 @@ namespace AspNet.Identity.Cassandra
             // INSERT INTO logins_by_provider ...
             batch.Add(prepared[1].Bind(login.LoginProvider, login.ProviderKey, user.Id));
 
-            await _session.ExecuteAsync(batch).ConfigureAwait(false);
+            await session.ExecuteAsync(batch).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -329,7 +357,7 @@ namespace AspNet.Identity.Cassandra
             if (user == null) throw new ArgumentNullException("user");
             if (login == null) throw new ArgumentNullException("login");
 
-            PreparedStatement[] prepared = await _removeLogin;
+            PreparedStatement[] prepared = await removeLogin;
             var batch = new BatchStatement();
 
             // DELETE FROM logins ...
@@ -338,7 +366,7 @@ namespace AspNet.Identity.Cassandra
             // DELETE FROM logins_by_provider ...
             batch.Add(prepared[1].Bind(login.LoginProvider, login.ProviderKey));
             
-            await _session.ExecuteAsync(batch).ConfigureAwait(false);
+            await session.ExecuteAsync(batch).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -348,11 +376,11 @@ namespace AspNet.Identity.Cassandra
         {
             if (user == null) throw new ArgumentNullException("user");
 
-            PreparedStatement prepared = await _getLogins;
+            PreparedStatement prepared = await getLogins;
             BoundStatement bound = prepared.Bind(user.Id);
 
-            RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
-            return rows.Select(row => new UserLoginInfo(row.GetValue<string>("login_provider"), row.GetValue<string>("provider_key"))).ToList();
+            RowSet rows = await session.ExecuteAsync(bound).ConfigureAwait(false);
+            return rows.Select(row => new UserLoginInfo(row.GetValue<string>("login_provider"), row.GetValue<string>("provider_key"), row.GetValue<string>("login_provider"))).ToList();
         }
 
         /// <summary>
@@ -362,18 +390,18 @@ namespace AspNet.Identity.Cassandra
         {
             if (login == null) throw new ArgumentNullException("login");
 
-            PreparedStatement prepared = await _getLoginsByProvider;
+            PreparedStatement prepared = await getLoginsByProvider;
             BoundStatement bound = prepared.Bind(login.LoginProvider, login.ProviderKey);
 
-            RowSet loginRows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
+            RowSet loginRows = await session.ExecuteAsync(bound).ConfigureAwait(false);
             Row loginResult = loginRows.FirstOrDefault();
             if (loginResult == null)
                 return null;
 
-            prepared = await _findById;
+            prepared = await findById;
             bound = prepared.Bind(loginResult.GetValue<Guid>("id"));
 
-            RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
+            RowSet rows = await session.ExecuteAsync(bound).ConfigureAwait(false);
             return User.FromRow(rows.SingleOrDefault());
         }
 
@@ -384,10 +412,10 @@ namespace AspNet.Identity.Cassandra
         {
             if (user == null) throw new ArgumentNullException("user");
 
-            PreparedStatement prepared = await _getClaims;
+            PreparedStatement prepared = await getClaims;
             BoundStatement bound = prepared.Bind(user.Id);
 
-            RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
+            RowSet rows = await session.ExecuteAsync(bound).ConfigureAwait(false);
             return rows.Select(row => new Claim(row.GetValue<string>("type"), row.GetValue<string>("value"))).ToList();
         }
 
@@ -399,9 +427,9 @@ namespace AspNet.Identity.Cassandra
             if (user == null) throw new ArgumentNullException("user");
             if (claim == null) throw new ArgumentNullException("claim");
 
-            PreparedStatement prepared = await _addClaim;
+            PreparedStatement prepared = await addClaim;
             BoundStatement bound = prepared.Bind(user.Id, claim.Type, claim.Value);
-            await _session.ExecuteAsync(bound).ConfigureAwait(false);
+            await session.ExecuteAsync(bound).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -412,10 +440,10 @@ namespace AspNet.Identity.Cassandra
             if (user == null) throw new ArgumentNullException("user");
             if (claim == null) throw new ArgumentNullException("claim");
 
-            PreparedStatement prepared = await _removeClaim;
+            PreparedStatement prepared = await removeClaim;
             BoundStatement bound = prepared.Bind(user.Id, claim.Type, claim.Value);
 
-            await _session.ExecuteAsync(bound).ConfigureAwait(false);
+            await session.ExecuteAsync(bound).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -454,9 +482,8 @@ namespace AspNet.Identity.Cassandra
         public Task SetSecurityStampAsync(User user, string stamp)
         {
             if (user == null) throw new ArgumentNullException("user");
-            if (stamp == null) throw new ArgumentNullException("stamp");
 
-            user.SecurityStamp = stamp;
+            user.SecurityStamp = stamp ?? throw new ArgumentNullException("stamp");
             return CompletedTask;
         }
 
@@ -574,10 +601,10 @@ namespace AspNet.Identity.Cassandra
         {
             if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("email cannot be null or empty", "email");
 
-            PreparedStatement prepared = await _findByEmail;
+            PreparedStatement prepared = await findByEmail;
             BoundStatement bound = prepared.Bind(email);
 
-            RowSet rows = await _session.ExecuteAsync(bound).ConfigureAwait(false);
+            RowSet rows = await session.ExecuteAsync(bound).ConfigureAwait(false);
             return User.FromRow(rows.SingleOrDefault());
         }
 
@@ -587,9 +614,7 @@ namespace AspNet.Identity.Cassandra
         public Task SetEmailAsync(User user, string email)
         {
             if (user == null) throw new ArgumentNullException("user");
-            if (email == null) throw new ArgumentNullException("email");
-
-            user.Email = email;
+            user.Email = email ?? throw new ArgumentNullException("email");
             return CompletedTask;
         }
 
@@ -628,9 +653,7 @@ namespace AspNet.Identity.Cassandra
         public Task SetPhoneNumberAsync(User user, string phoneNumber)
         {
             if (user == null) throw new ArgumentNullException("user");
-            if (phoneNumber == null) throw new ArgumentNullException("phoneNumber");
-
-            user.PhoneNumber = phoneNumber;
+            user.PhoneNumber = phoneNumber ?? throw new ArgumentNullException("phoneNumber");
             return CompletedTask;
         }
 
@@ -663,10 +686,59 @@ namespace AspNet.Identity.Cassandra
             return CompletedTask;
         }
         
+        public Task<string> GetUserIdAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
+
+            return Task.FromResult(user.Id.ToString());
+        }
+
+        public Task<string> GetUserNameAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
+
+            return Task.FromResult(user.UserName);
+        }
+
+        public Task SetUserNameAsync(User user, string userName, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
+
+            user.UserName = userName ?? throw new ArgumentNullException(nameof(userName));
+
+            return Task.CompletedTask;
+        }
+
+        public Task<string> GetNormalizedUserNameAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
+
+            return Task.FromResult(user.UserName.ToUpper());
+        }
+
+        public Task SetNormalizedUserNameAsync(User user, string normalizedName, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.CompletedTask;
+        }
+
+        private void FailOnDisposed()
+        {
+            if (isDisposed) throw new ObjectDisposedException(GetType().Name);
+            if (session == null) throw new InvalidOperationException("Session is null");
+        }
+
         protected void Dispose(bool disposing)
         {
-            if (_disposeOfSession)
-                _session.Dispose();
+            if (disposeOfSession) session.Dispose();
+            isDisposed = true;
         }
 
         public void Dispose()
@@ -674,5 +746,7 @@ namespace AspNet.Identity.Cassandra
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
     }
 }
+
