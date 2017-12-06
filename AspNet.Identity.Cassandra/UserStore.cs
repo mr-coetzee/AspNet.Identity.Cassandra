@@ -9,8 +9,8 @@ using Microsoft.AspNetCore.Identity;
 
 namespace AspNet.Identity.Cassandra
 {
-   public class UserStore : IUserStore<User>
-        //, IUserLoginStore<User>, IUserClaimStore<User>,
+   public class UserStore : IUserStore<User>, IUserLoginStore<User>
+        //, IUserClaimStore<User>,
         //                              IUserPasswordStore<User>, IUserSecurityStampStore<User>,
         //                              IUserTwoFactorStore<User>, IUserLockoutStore<User>, 
         //                              IUserPhoneNumberStore<User>, IUserEmailStore<User>
@@ -319,7 +319,7 @@ namespace AspNet.Identity.Cassandra
         {
             cancellationToken.ThrowIfCancellationRequested();
             FailOnDisposed();
-            if (string.IsNullOrWhiteSpace(normalizedUserName)) throw new ArgumentException(nameof(normalizedUserName));
+            if (string.IsNullOrWhiteSpace(normalizedUserName)) throw new ArgumentException("May not be null or empty", nameof(normalizedUserName));
             cancellationToken.ThrowIfCancellationRequested();
             
             PreparedStatement prepared = await findByName;
@@ -332,10 +332,13 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Adds a user login with the specified provider and key
         /// </summary>
-        public async Task AddLoginAsync(User user, UserLoginInfo login)
+        public async Task AddLoginAsync(User user, UserLoginInfo login, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (user == null) throw new ArgumentNullException("user");
-            if (login == null) throw new ArgumentNullException("login");
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            if (login == null) throw new ArgumentNullException(nameof(login));
+            cancellationToken.ThrowIfCancellationRequested();
 
             PreparedStatement[] prepared = await addLogin;
             var batch = new BatchStatement();
@@ -352,19 +355,23 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Removes the user login with the specified combination if it exists
         /// </summary>
-        public async Task RemoveLoginAsync(User user, UserLoginInfo login)
+        public async Task RemoveLoginAsync(User user, string loginProvider, string providerKey, CancellationToken cancellationToken = default(CancellationToken))
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
             if (user == null) throw new ArgumentNullException("user");
-            if (login == null) throw new ArgumentNullException("login");
+            if (string.IsNullOrWhiteSpace(loginProvider)) throw new ArgumentException("May not be null or empty", nameof(loginProvider));
+            if (string.IsNullOrWhiteSpace(providerKey)) throw new ArgumentException("May not be null or empty", nameof(providerKey));
+            cancellationToken.ThrowIfCancellationRequested();
 
             PreparedStatement[] prepared = await removeLogin;
             var batch = new BatchStatement();
 
             // DELETE FROM logins ...
-            batch.Add(prepared[0].Bind(user.Id, login.LoginProvider, login.ProviderKey));
+            batch.Add(prepared[0].Bind(user.Id, loginProvider, providerKey));
 
             // DELETE FROM logins_by_provider ...
-            batch.Add(prepared[1].Bind(login.LoginProvider, login.ProviderKey));
+            batch.Add(prepared[1].Bind(loginProvider, providerKey));
             
             await session.ExecuteAsync(batch).ConfigureAwait(false);
         }
@@ -372,9 +379,12 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns the linked accounts for this user
         /// </summary>
-        public async Task<IList<UserLoginInfo>> GetLoginsAsync(User user)
+        public async Task<IList<UserLoginInfo>> GetLoginsAsync(User user, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (user == null) throw new ArgumentNullException("user");
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            cancellationToken.ThrowIfCancellationRequested();
 
             PreparedStatement prepared = await getLogins;
             BoundStatement bound = prepared.Bind(user.Id);
@@ -386,12 +396,16 @@ namespace AspNet.Identity.Cassandra
         /// <summary>
         /// Returns the user associated with this login
         /// </summary>
-        public async Task<User> FindAsync(UserLoginInfo login)
+        public async Task<User> FindByLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (login == null) throw new ArgumentNullException("login");
+            cancellationToken.ThrowIfCancellationRequested();
+            FailOnDisposed();
+            if (string.IsNullOrWhiteSpace(loginProvider)) throw new ArgumentException("May not be null or empty", nameof(loginProvider));
+            if (string.IsNullOrWhiteSpace(providerKey)) throw new ArgumentException("May not be null or empty", nameof(providerKey));
+            cancellationToken.ThrowIfCancellationRequested();
 
             PreparedStatement prepared = await getLoginsByProvider;
-            BoundStatement bound = prepared.Bind(login.LoginProvider, login.ProviderKey);
+            BoundStatement bound = prepared.Bind(loginProvider, providerKey);
 
             RowSet loginRows = await session.ExecuteAsync(bound).ConfigureAwait(false);
             Row loginResult = loginRows.FirstOrDefault();
@@ -746,7 +760,6 @@ namespace AspNet.Identity.Cassandra
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
     }
 }
 
