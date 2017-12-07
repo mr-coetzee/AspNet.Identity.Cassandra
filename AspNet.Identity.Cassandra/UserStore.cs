@@ -9,15 +9,10 @@ using Microsoft.AspNetCore.Identity;
 
 namespace AspNet.Identity.Cassandra
 {
-   public class UserStore : IUserStore<User>,
-        IUserLoginStore<User>,
-        IUserClaimStore<User>,
-        IUserPasswordStore<User>,
-        IUserSecurityStampStore<User>,
-        IUserTwoFactorStore<User>,
-        IUserLockoutStore<User>,
-        IUserPhoneNumberStore<User>,
-        IUserEmailStore<User>
+   public class UserStore : IUserStore<User>, IUserLoginStore<User>, IUserClaimStore<User>,
+                                    IUserPasswordStore<User>, IUserSecurityStampStore<User>,
+                                    IUserTwoFactorStore<User>, IUserLockoutStore<User>,
+                                    IUserPhoneNumberStore<User>, IUserEmailStore<User>, IDisposable
     {
         private bool isDisposed = false;
         private readonly ISession session;
@@ -50,6 +45,11 @@ namespace AspNet.Identity.Cassandra
         private readonly AsyncLazy<PreparedStatement> getClaims;
         private readonly AsyncLazy<PreparedStatement> addClaim;
         private readonly AsyncLazy<PreparedStatement> removeClaim;
+        private void FailOnDisposed()
+        {
+            if (isDisposed) throw new ObjectDisposedException(GetType().Name);
+            if (session == null) throw new InvalidOperationException("Session is null");
+        }
 
         /// <summary>
         /// Creates a new instance of CassandraUserStore that will use the provided ISession instance to talk to Cassandra.  Optionally,
@@ -141,13 +141,7 @@ namespace AspNet.Identity.Cassandra
                 SchemaCreationHelper.CreateSchemaIfNotExists(session);
         }
 
-        public Task SetNormalizedUserNameAsync(User user, string normalizedName, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return Task.CompletedTask;
-        }
-
         #region IUserStore
-
         /// <summary>
         /// Insert a new user.
         /// </summary>
@@ -364,6 +358,12 @@ namespace AspNet.Identity.Cassandra
 
             return IdentityResult.Success;
         }
+
+        public Task SetNormalizedUserNameAsync(User user, string normalizedName, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.CompletedTask;
+        }
+
         #endregion IUserStore
 
         #region IUserLoginStore
@@ -828,12 +828,6 @@ namespace AspNet.Identity.Cassandra
             return Task.CompletedTask;
         }
         #endregion IUserEmailStore
-
-        private void FailOnDisposed()
-        {
-            if (isDisposed) throw new ObjectDisposedException(GetType().Name);
-            if (session == null) throw new InvalidOperationException("Session is null");
-        }
 
         protected void Dispose(bool disposing)
         {

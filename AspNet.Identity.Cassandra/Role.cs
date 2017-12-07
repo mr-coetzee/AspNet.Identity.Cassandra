@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Identity;
 namespace AspNet.Identity.Cassandra
 {
     /// <summary>
-    /// Represents a.
+    /// Represents a role.
     /// </summary>
-    public class Role : IUserRole<Guid>
+    public class Role
     {
         private readonly string _originalName;
 

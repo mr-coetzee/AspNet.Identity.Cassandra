@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading;
 using System.Threading.Tasks;
 using Cassandra;
 using Microsoft.AspNetCore.Identity;
 
 namespace AspNet.Identity.Cassandra
 {
-    public class RoleStore : IUserRoleStore<Role, Guid>
+    public class RoleStore : IRoleStore<Role>, IDisposable
     {
         // A cached copy of some completed tasks
         private static readonly Task<bool> TrueTask = Task.FromResult(true);
@@ -80,6 +81,9 @@ namespace AspNet.Identity.Cassandra
             if (createSchema)
                 SchemaCreationHelper.CreateSchemaIfNotExists(session);
         }
+
+        #region IRoleStore
+        #endregion IRoleStore
 
         /// <summary>
         /// Insert a new Role.
@@ -205,6 +209,56 @@ namespace AspNet.Identity.Cassandra
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        public Task<IdentityResult> CreateAsync(Role role, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IdentityResult> UpdateAsync(Role role, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IdentityResult> DeleteAsync(Role role, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetRoleIdAsync(Role role, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetRoleNameAsync(Role role, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SetRoleNameAsync(Role role, string roleName, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetNormalizedRoleNameAsync(Role role, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SetNormalizedRoleNameAsync(Role role, string normalizedName, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Role> FindByIdAsync(string roleId, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Role> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
     }
 }
